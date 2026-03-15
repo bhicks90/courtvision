@@ -1,0 +1,16 @@
+# Node
+node_modules/
+dist/
+.env
+*.log
+
+# Next.js
+.next/
+out/
+
+# Cache / temp files
+*.json
+players.json
+
+# macOS system files
+.DS_Store
