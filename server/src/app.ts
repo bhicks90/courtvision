@@ -1,9 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import playersRouter from './routes/players';
 import dotenv from 'dotenv';
-
 dotenv.config();
+import playersRouter from './routes/players';
 
 const app = express();
 app.use(cors());
