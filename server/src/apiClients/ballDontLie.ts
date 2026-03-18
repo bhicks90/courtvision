@@ -1,85 +1,74 @@
 import chalk from 'chalk';
-import { RequestHandler } from '../utils/RequestHandler';
 import { CacheManager } from '../utils/CacheManager';
-import { BALLDONTLIE_KEY, BASE_URL } from '../constants';
-import { BallDontLiePlayer, BallDontLiePlayersResponse } from '../types/balldontlie';
+import { BallDontLiePlayer, BallDontLieTeam } from '../types/balldontlie';
+import { PLAYER_CACHE_FILE, TEAM_CACHE_FILE } from '../constants/cache';
+import { RequestHandler } from '../utils/RequestHandler';
+import { BASE_URL, BALLDONTLIE_KEY, BALLDONTLIE_PATHS, BALLDONTLIE_PARAMS } from '../constants';
+import { ApiRequestBuilder } from '../utils/ApiRequestBuilder';
+
+// --------------------
+// Player cache & API
+// --------------------
+const playerCacheManager = new CacheManager<BallDontLiePlayer>({
+    fileName: PLAYER_CACHE_FILE,
+});
 
 const requestHandler = new RequestHandler({
     headers: { Authorization: `Bearer ${BALLDONTLIE_KEY}` },
 });
 
-const playerCacheManager = new CacheManager<BallDontLiePlayer>({ fileName: 'players.json' });
-
-const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const normalize = (str: string) =>
+    str
+        .toLowerCase()
+        .trim()
+        .replace(/[-.'’]/g, '')
+        .replace(/\s+/g, ' ');
 
 /**
- * Fetch all players incrementally, filter only active ones (have a team),
- * and cache them
+ * Get all cached players
  */
-export const fetchAllPlayers = async (): Promise<BallDontLiePlayer[]> => {
-    const cachedPlayers = playerCacheManager.read();
-    let allPlayers: BallDontLiePlayer[] = cachedPlayers ?? [];
-    let nextCursor: number | null = 0;
-
-    console.log(
-        chalk.blue(`[CACHE] Starting fetch. Currently cached players: ${allPlayers.length}`),
-    );
-
-    do {
-        const url: string = `${BASE_URL}/players?per_page=100${nextCursor ? `&cursor=${nextCursor}` : ''}`;
-        console.log(chalk.blue(`[GET] Requesting: ${url}`));
-
-        const response: BallDontLiePlayersResponse =
-            await requestHandler.get<BallDontLiePlayersResponse>(url);
-
-        // Filter only players with a team (active players)
-        const activePlayers = response.data.filter((p) => p.team && p.team.id);
-
-        // Append only new active players
-        const newPlayers = activePlayers.filter((p) => !allPlayers.find((cp) => cp.id === p.id));
-
-        if (newPlayers.length) {
-            playerCacheManager.append(newPlayers);
-            allPlayers.push(...newPlayers);
-            console.log(
-                chalk.green(
-                    `[CACHE] Added ${newPlayers.length} new active players. Total cached: ${allPlayers.length}`,
-                ),
-            );
-        } else {
-            console.log(chalk.yellow(`[CACHE] No new active players to add from this batch.`));
-        }
-
-        nextCursor = response.meta.next_cursor ?? null;
-
-        if (nextCursor) {
-            console.log(
-                chalk.blue(`[RATE LIMIT] Waiting 12 seconds before next request to avoid limit...`),
-            );
-            await sleep(12_000);
-        }
-    } while (nextCursor);
-
-    console.log(
-        chalk.green(`[CACHE] Fetch complete. Total active players cached: ${allPlayers.length}`),
-    );
-    return allPlayers;
+export const fetchAllPlayers = (): BallDontLiePlayer[] => {
+    const cachedPlayers = playerCacheManager.read() || [];
+    console.log(chalk.green(`[CACHE] Loaded ${cachedPlayers.length} players from cache`));
+    return cachedPlayers;
 };
 
 /**
- * Fetch players with optional search and limit
+ * Fetch players from cache first, then API if not found
  */
 export const fetchPlayers = async (perPage: number, search?: string) => {
     try {
-        const allPlayers = await fetchAllPlayers();
+        let filtered = fetchAllPlayers();
 
-        const filtered = search
-            ? allPlayers.filter((player) =>
-                  `${player.first_name} ${player.last_name}`
-                      .toLowerCase()
-                      .includes(search.toLowerCase()),
-              )
-            : allPlayers;
+        if (search) {
+            filtered = filtered.filter((player) =>
+                normalize(`${player.first_name} ${player.last_name}`).includes(normalize(search)),
+            );
+
+            // Cache miss: query API
+            if (filtered.length === 0) {
+                console.log(
+                    chalk.blue(`[API] Cache miss for "${search}". Searching BallDontLie API...`),
+                );
+
+                const url = new ApiRequestBuilder(BASE_URL, BALLDONTLIE_PATHS.PLAYERS)
+                    .addParam(BALLDONTLIE_PARAMS.SEARCH, search)
+                    .addParam(BALLDONTLIE_PARAMS.PER_PAGE, perPage)
+                    .build();
+
+                const apiResult = await requestHandler.get<{ data: BallDontLiePlayer[] }>(url);
+
+                if (apiResult.data.length > 0) {
+                    playerCacheManager.append(apiResult.data);
+                    console.log(
+                        chalk.green(
+                            `[CACHE] Added ${apiResult.data.length} player(s) to cache from API`,
+                        ),
+                    );
+                    filtered = apiResult.data;
+                }
+            }
+        }
 
         return { data: filtered.slice(0, perPage) };
     } catch (error: any) {
@@ -89,12 +78,12 @@ export const fetchPlayers = async (perPage: number, search?: string) => {
 };
 
 /**
- * Fetch a single player by ID
+ * Fetch a single player by ID (cache first, then API)
  */
 export const fetchPlayerById = async (id: number) => {
     try {
-        const allPlayers = await fetchAllPlayers();
-        const found = allPlayers.find((player) => player.id === id);
+        const allPlayers = fetchAllPlayers();
+        let found = allPlayers.find((player) => player.id === id);
 
         if (found) {
             console.log(
@@ -105,10 +94,60 @@ export const fetchPlayerById = async (id: number) => {
             return { data: found };
         }
 
-        console.log(chalk.red(`[CACHE] Player ${id} not found in cache`));
-        return { data: null };
+        console.log(
+            chalk.blue(`[API] Cache miss for player ID ${id}. Searching BallDontLie API...`),
+        );
+
+        const url = new ApiRequestBuilder(BASE_URL, BALLDONTLIE_PATHS.PLAYER_BY_ID + id).build();
+        const apiPlayer = await requestHandler.get<BallDontLiePlayer>(url);
+
+        if (apiPlayer) {
+            playerCacheManager.append([apiPlayer]);
+            console.log(
+                chalk.green(
+                    `[CACHE] Added player ${apiPlayer.first_name} ${apiPlayer.last_name} to cache`,
+                ),
+            );
+            found = apiPlayer;
+        } else {
+            console.log(chalk.red(`[API] Player ID ${id} not found in BallDontLie`));
+        }
+
+        return { data: found ?? null };
     } catch (error: any) {
         console.log(chalk.red(`[ERROR] Failed to fetch player ${id}: ${error.message}`));
         return { data: null };
     }
+};
+
+// --------------------
+// Team cache only
+// --------------------
+const teamCacheManager = new CacheManager<BallDontLieTeam>({
+    fileName: TEAM_CACHE_FILE,
+});
+
+/**
+ * Get all cached teams
+ */
+export const fetchAllTeams = (): BallDontLieTeam[] => {
+    const cachedTeams = teamCacheManager.read() || [];
+    console.log(chalk.green(`[CACHE] Loaded ${cachedTeams.length} teams from cache`));
+    return cachedTeams;
+};
+
+/**
+ * Get a team by ID (cache only)
+ */
+export const fetchTeamById = (id: number): BallDontLieTeam | null => {
+    const cachedTeams = fetchAllTeams();
+    const found = cachedTeams.find((team) => team.id === id) || null;
+
+    if (found) {
+        console.log(chalk.green(`[CACHE] Team ${id} found in cache: ${found.full_name}`));
+    } else {
+        console.log(chalk.red(`[CACHE] Team ${id} not found in cache`));
+    }
+
+    return found;
 };
