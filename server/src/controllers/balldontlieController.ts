@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as balldontlieService from '../services/balldontlieService';
-import { handleApiError } from '../utils/handleApiError';
+import { handleApiError, handleApiSuccess } from '../utils/handleApiResponse';
 
 export const getPlayers = async (req: Request, res: Response) => {
     const perPage = Number(req.query.perPage) || 25;
@@ -9,7 +9,11 @@ export const getPlayers = async (req: Request, res: Response) => {
     try {
         const players = await balldontlieService.getPlayers(perPage, search);
 
-        res.json({ data: players });
+        handleApiSuccess({
+            res,
+            data: players,
+            message: 'Players retrieved successfully',
+        });
     } catch (error) {
         handleApiError(res, {
             message: 'Failed to fetch players',
@@ -26,10 +30,14 @@ export const getPlayerById = async (req: Request, res: Response) => {
         const player = await balldontlieService.getPlayerById(id);
 
         if (!player) {
-            return handleApiError(res, { message: 'Player not found', status: 404 });
+            return handleApiError(res, { message: 'Player not found', statusCode: 404 });
         }
 
-        res.json({ data: player });
+        handleApiSuccess({
+            res,
+            data: player,
+            message: 'Player retrieved successfully',
+        });
     } catch (error) {
         handleApiError(res, {
             message: 'Failed to fetch player',
@@ -42,8 +50,12 @@ export const getPlayerById = async (req: Request, res: Response) => {
 export const getTeams = async (_req: Request, res: Response) => {
     try {
         const teams = balldontlieService.getTeams();
-        
-        res.json({ data: teams });
+
+        handleApiSuccess({
+            res,
+            data: teams,
+            message: 'Teams retrieved successfully',
+        });
     } catch (error) {
         handleApiError(res, {
             message: 'Failed to fetch teams',
@@ -60,10 +72,14 @@ export const getTeamById = async (req: Request, res: Response) => {
         const team = balldontlieService.getTeamById(id);
 
         if (!team) {
-            return handleApiError(res, { message: 'Team not found', status: 404 });
+            return handleApiError(res, { message: 'Team not found', statusCode: 404 });
         }
 
-        res.json({ data: team });
+        handleApiSuccess({
+            res,
+            data: team,
+            message: 'Team retrieved successfully',
+        });
     } catch (error) {
         handleApiError(res, {
             message: 'Failed to fetch team',

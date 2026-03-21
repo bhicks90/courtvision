@@ -1,7 +1,11 @@
 import chalk from 'chalk';
 import { CacheManager } from '../utils/CacheManager';
-import { BallDontLiePlayer, BallDontLieTeam } from '../types/balldontlie';
-import { PLAYER_CACHE_FILE, TEAM_CACHE_FILE } from '../constants/cache';
+import {
+    BallDontLiePlayer,
+    BallDontLieSinglePlayerResponse,
+    BallDontLiePlayersResponse,
+    BallDontLieTeam,
+} from '../types/balldontlie';import { PLAYER_CACHE_FILE, TEAM_CACHE_FILE } from '../constants/cache';
 import { RequestHandler } from '../utils/RequestHandler';
 import { BASE_URL, BALLDONTLIE_KEY, BALLDONTLIE_PATHS, BALLDONTLIE_PARAMS } from '../constants';
 import { ApiRequestBuilder } from '../utils/ApiRequestBuilder';
@@ -80,7 +84,7 @@ export const fetchPlayers = async (perPage: number, search?: string) => {
 /**
  * Fetch a single player by ID (cache first, then API)
  */
-export const fetchPlayerById = async (id: number) => {
+export const fetchPlayerById = async (id: number): Promise<BallDontLiePlayer | null> => {
     try {
         const allPlayers = fetchAllPlayers();
         let found = allPlayers.find((player) => player.id === id);
@@ -91,7 +95,7 @@ export const fetchPlayerById = async (id: number) => {
                     `[CACHE] Player ${id} found in cache: ${found.first_name} ${found.last_name}`,
                 ),
             );
-            return { data: found };
+            return found; // plain player object
         }
 
         console.log(
@@ -99,9 +103,11 @@ export const fetchPlayerById = async (id: number) => {
         );
 
         const url = new ApiRequestBuilder(BASE_URL, BALLDONTLIE_PATHS.PLAYER_BY_ID + id).build();
-        const apiPlayer = await requestHandler.get<BallDontLiePlayer>(url);
 
-        if (apiPlayer) {
+        const apiResponse = await requestHandler.get<BallDontLieSinglePlayerResponse>(url);
+
+        if (apiResponse.data) {
+            const apiPlayer: BallDontLiePlayer = apiResponse.data; // unwrap safely
             playerCacheManager.append([apiPlayer]);
             console.log(
                 chalk.green(
@@ -113,10 +119,10 @@ export const fetchPlayerById = async (id: number) => {
             console.log(chalk.red(`[API] Player ID ${id} not found in BallDontLie`));
         }
 
-        return { data: found ?? null };
+        return found ?? null;
     } catch (error: any) {
         console.log(chalk.red(`[ERROR] Failed to fetch player ${id}: ${error.message}`));
-        return { data: null };
+        return null;
     }
 };
 

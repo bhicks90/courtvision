@@ -35,7 +35,7 @@ export const getPlayers = async (
 export const getPlayerById = async (id: number): Promise<BallDontLiePlayer | null> => {
     const result = await apiClient.fetchPlayerById(id);
 
-    return result.data || null;
+    return result || null;
 };
 export const getTeams = (): BallDontLieTeam[] => apiClient.fetchAllTeams();
 export const getTeamById = (id: number): BallDontLieTeam | null => apiClient.fetchTeamById(id);
