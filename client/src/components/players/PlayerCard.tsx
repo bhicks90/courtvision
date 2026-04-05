@@ -1,12 +1,13 @@
 "use client";
 
+import { memo } from "react";
 import { BallDontLiePlayer } from "@/types/balldontlie";
 
 interface Props {
   player: BallDontLiePlayer;
 }
 
-export default function PlayerCard({ player }: Props) {
+function PlayerCardComponent({ player }: Props) {
   return (
     <div className="border rounded p-4 shadow hover:shadow-lg">
       <h2 className="font-bold">
@@ -18,3 +19,9 @@ export default function PlayerCard({ player }: Props) {
     </div>
   );
 }
+
+// Memoize with React.memo to avoid unnecessary re-renders
+export default memo(
+  PlayerCardComponent,
+  (prev, next) => prev.player.id === next.player.id,
+);

@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+CourtVision 🏀
 
-## Getting Started
+A modern basketball analytics web app that aggregates data from multiple APIs and presents it in an interactive dashboard.
 
-First, run the development server:
+This project is a demo application to showcase full-stack development skills for Upwork/portfolio purposes. Basketball was chosen as the focus because it’s a sport I love, but the architecture and patterns are applicable to any data-driven web app.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Features
+Landing page with NBA/basketball news (coming soon)
+Player profile pages with stats, images, and career info
+Team pages with advanced statistics dashboards
+Search functionality for players and teams
+Integration with multiple APIs:
+BallDontLie API
+ – player, team, and stats data
+SportsData.io – player images, betting odds, game schedules (free tier)
+ESPN (unofficial) – logos and rankings
+Tech Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Frontend: React, Next.js (SSR + routing), Redux Toolkit, Tailwind CSS, Chart.js
+Backend: Node.js, Express, TypeScript
+API Layer: Axios for external API requests
+DevOps: Docker, Docker Compose
+Testing: Jest for unit and integration tests
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Folder Structure
+courtvision
+│
+├── client (Next.js + React)
+│   ├── components
+│   ├── pages
+│   ├── store (Redux)
+│   ├── services
+│   └── hooks
+│
+├── server (Node + Express)
+│   ├── routes
+│   ├── controllers
+│   ├── services
+│   └── apiClients
+│
+└── README.md
+Getting Started
+Prerequisites
+Node.js >= 18
+Docker & Docker Compose
+Install & Run Locally
+git clone https://github.com/bhicks90/courtvision.git
+cd courtvision
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Install client and server dependencies
+cd client && npm install
+cd ../server && npm install
 
-## Learn More
+# Run in development mode
+docker-compose up
+Run Tests
+# Backend tests
+cd server
+npm run test
 
-To learn more about Next.js, take a look at the following resources:
+# Frontend tests
+cd client
+npm run test
+API & Caching Strategy
+BallDontLie API is cached locally via file-based cache to reduce redundant calls and avoid rate limits.
+API responses are normalized for consistent frontend consumption.
+Additional APIs (SportsData.io, ESPN) are planned for images, odds, and team data.
+Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This is a demo portfolio project — contributions are welcome but mainly for learning purposes.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Notes
+This app is for demo purposes only. Data may not always be fully up-to-date.
+Focus is on demonstrating full-stack development, TypeScript, Redux patterns, and API integration.
+Screenshots
 
-## Deploy on Vercel
+Add screenshots here once pages are built
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License

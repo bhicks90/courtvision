@@ -1,45 +1,30 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import axios from "../services/api";
-import { BallDontLiePlayer } from "../types/balldontlie";
+import { playersApi } from "@/services/playersApi";
+import { BallDontLiePlayer } from "@/types/balldontlie";
+import { THUNKS, SLICE_NAMES } from "@/constants/redux";
+import { handleApiError } from "@/utils/handleApiError";
+import { AsyncState } from "@/types/asyncState";
 
-import { isAxiosError } from "axios";
-import { API_ENDPOINTS, THUNKS } from "../constants/api";
-import { SLICE_NAMES } from "@/constants/redux";
+interface FetchPlayersParams {
+  perPage?: number;
+  search?: string;
+}
 
 export const fetchPlayers = createAsyncThunk<
   BallDontLiePlayer[],
-  { perPage?: number; search?: string },
+  FetchPlayersParams,
   { rejectValue: string }
->(
-  THUNKS.FETCH_PLAYERS,
-  async ({ perPage = 25, search = "" }, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(API_ENDPOINTS.PLAYERS, {
-        params: { perPage, search },
-      });
-      
-      return response.data.data as BallDontLiePlayer[];
-    } catch (error: unknown) {
-      let message = "Unknown error";
+>(THUNKS.FETCH_PLAYERS, async (params = {}, { rejectWithValue }) => {
+  try {
+    return await playersApi.getPlayers(params);
+  } catch (error) {
+    return rejectWithValue(handleApiError(error));
+  }
+});
 
-      if (isAxiosError(error))
-        message = error.response?.data?.error || error.message;
-      else if (error instanceof Error) message = error.message;
-
-      return rejectWithValue(message);
-    }
-  },
-);
-
-interface PlayersState {
-  list: BallDontLiePlayer[];
-  loading: boolean;
-  error: string | null;
-}
-
-const initialState: PlayersState = {
-  list: [],
-  loading: false,
+const initialState: AsyncState<BallDontLiePlayer[]> = {
+  data: [],
+  status: "idle",
   error: null,
 };
 
@@ -48,26 +33,27 @@ const playersSlice = createSlice({
   initialState,
   reducers: {
     clearPlayers: (state) => {
-      state.list = [];
+      state.data = [];
+      state.status = "idle";
       state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchPlayers.pending, (state) => {
-        state.loading = true;
+        state.status = "loading";
         state.error = null;
       })
       .addCase(
         fetchPlayers.fulfilled,
         (state, action: PayloadAction<BallDontLiePlayer[]>) => {
-          state.loading = false;
-          state.list = action.payload;
+          state.status = "succeeded";
+          state.data = action.payload;
         },
       )
       .addCase(fetchPlayers.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
+        state.status = "failed";
+        state.error = action.payload ?? "Failed to fetch players";
       });
   },
 });
