@@ -30,6 +30,8 @@ This project is a demonstration of full-stack development capabilities, showcasi
 - Tailwind CSS  
 - Chart.js  
 
+> **Note:** The current frontend uses a Redux-driven SPA pattern within Next.js and does not yet fully leverage SSR or server components. See [Architecture Notes](#architecture-notes) for details.
+
 ### Backend
 - Node.js  
 - Express  
@@ -44,6 +46,23 @@ This project is a demonstration of full-stack development capabilities, showcasi
 
 ### Testing
 - Jest (unit and integration testing)  
+
+---
+
+## Architecture Notes
+
+This project currently uses Next.js alongside a Redux-based client architecture that behaves similarly to a traditional React SPA. While this approach is functional and familiar, it does not fully leverage Next.js features such as server-side rendering (SSR), static generation, or server components.
+
+This reflects an evolving design rather than an oversight. The original goal for CourtVision was to build **two parallel frontend implementations**:
+
+- A **Next.js application** that emphasizes SSR and performance-oriented patterns  
+- A **React + Redux SPA** that demonstrates client-side state management at scale  
+
+Both clients were intended to consume the same backend, allowing for a direct comparison of architectural tradeoffs, performance characteristics, and developer experience.
+
+Current development has been focused on backend integration and core feature delivery, so the frontend presently leans toward the Redux-driven SPA model within a Next.js environment.
+
+A future iteration will refactor the Next.js client to more fully utilize its native capabilities (e.g., SSR, server components, and reduced client-side state where appropriate), along with completing the original goal of maintaining two distinct frontend approaches.
 
 ---
 
